@@ -47,67 +47,75 @@ ifneq ($(strip $(TARGET_USES_RRO)), true)
 DEVICE_PACKAGE_OVERLAYS += hardware/qcom/audio/configs/common/overlay
 endif
 
+# ASUS_BSP Audio +++
+ifeq ($(ASUS_BUILD_PROJECT),AI2201)
+PRODUCT_COPY_FILES += \
+    vendor/asus/AI2201/audio/boot_sound/init.asus.boot_sound.sh:system/bin/init.asus.boot_sound.sh \
+    vendor/asus/AI2201/audio/boot_sound/boot_sound.wav:system/etc/boot_sound.wav
+endif
+# ASUS_BSP Audio ---
+
 # Low latency audio buffer size in frames
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio_hal.period_size=192
 
 #disable tunnel encoding
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.tunnel.encode=false
 
 #Buffer size in kbytes for compress offload playback
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.buffer.size.kb=32
 
 #Enable audio track offload by default
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.track.enable=true
 
 #enable voice path for PCM VoIP by default
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.voice.path.for.pcm.voip=true
 
 #Enable multi channel aac through offload
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.multiaac.enable=true
 
 #Disable Multiple offload sesison
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.multiple.enabled=false
 
 #parser input buffer size(256kb) in byte stream mode
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.parser.ip.buffer.size=262144
 
 #flac sw decoder 24 bit decode capability
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.flac.sw.decoder.24bit=true
 
 #split a2dp DSP supported encoder list
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac
 
 #enable software decoders for ALAC and APE
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.alac.decoder=true
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.ape.decoder=true
 
 #enable hw aac encoder by default
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=true
 
 ifneq ($(GENERIC_ODM_IMAGE),true)
 # Reduce client buffer size for fast audio output tracks
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 af.fast_track_multiplier=1
 
 #Enable offload audio video playback by default
-PRODUCT_VENDOR_PROPERTIES += \
-audio.offload.video=true
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.video=false
 
 #Enable music through deep buffer
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
 
 #audio becoming noisy intent broadcast delay
@@ -131,11 +139,11 @@ PRODUCT_PRODUCT_PROPERTIES += \
 audio.sys.offload.pstimeout.secs=3
 
 #Set AudioFlinger client heap size
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 ro.af.client_heap_size_kbyte=7168
 
 #enable deep buffer
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 media.stagefright.audio.deep=false
 
 endif
@@ -143,13 +151,13 @@ endif
 
 # Enable AAudio MMAP/NOIRQ data path.
 # 2 is AAUDIO_POLICY_AUTO so it will try MMAP then fallback to Legacy path.
-PRODUCT_VENDOR_PROPERTIES += aaudio.mmap_policy=2
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=2
 # Allow EXCLUSIVE then fall back to SHARED.
-PRODUCT_VENDOR_PROPERTIES += aaudio.mmap_exclusive_policy=2
-PRODUCT_VENDOR_PROPERTIES += aaudio.hw_burst_min_usec=2000
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_exclusive_policy=2
+PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 
 #enable mirror-link feature
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.mirrorlink=false
 
 # for HIDL related packages

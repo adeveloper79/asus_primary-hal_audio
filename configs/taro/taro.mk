@@ -7,8 +7,6 @@ AUDIO_USE_STUB_HAL := true
 endif
 endif
 
-AUDIO_HAL_DIR := hardware/qcom-caf/sm8450/audio
-
 ifneq ($(AUDIO_USE_STUB_HAL), true)
 BOARD_USES_ALSA_AUDIO := true
 TARGET_USES_AOSP_FOR_AUDIO := false
@@ -118,9 +116,10 @@ AUDIO_PAL += PalTest
 
 BOARD_SUPPORTS_OPENSOURCE_STHAL := true
 
-AUDIO_HARDWARE := audio.usb.default
+AUDIO_HARDWARE := audio.a2dp.default
+AUDIO_HARDWARE += audio.usb.default
 AUDIO_HARDWARE += audio.r_submix.default
-AUDIO_HARDWARE += audio.primary.$(TARGET_BOARD_PLATFORM)
+AUDIO_HARDWARE += audio.primary.taro
 
 #HAL Wrapper
 AUDIO_WRAPPER := libqahw
@@ -155,12 +154,20 @@ PRODUCT_PACKAGES += ftm_test_config_diwali-idp-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-qrd-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-idp-sku1-snd-card
 PRODUCT_PACKAGES += ftm_test_config_diwali-qrd-sku1-snd-card
-PRODUCT_PACKAGES += ftm_test_config_ukee-mtp-snd-card
-PRODUCT_PACKAGES += ftm_test_config_ukee-qrd-snd-card
 PRODUCT_PACKAGES += audioadsprpcd
 PRODUCT_PACKAGES += vendor.qti.audio-adsprpc-service.rc
 PRODUCT_PACKAGES += android.hardware.audio.service_64
 PRODUCT_PACKAGES += android.hardware.audio.service_64.rc
+# ASUS_BSP for load customized acdb +++
+PRODUCT_PACKAGES += AI2201_acdb_cal.acdb
+PRODUCT_PACKAGES += AI2201_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += AI2202_acdb_cal.acdb
+PRODUCT_PACKAGES += AI2202_workspaceFileXml.qwsp
+PRODUCT_PACKAGES += AI2202_EU_acdb_cal.acdb
+PRODUCT_PACKAGES += AI2202_EU_workspaceFileXml.qwsp
+# ASUS_BSP for load customized acdb ---
+PRODUCT_PACKAGES += IDP_acdb_cal.acdb
+PRODUCT_PACKAGES += IDP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += MTP_acdb_cal.acdb
 PRODUCT_PACKAGES += MTP_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += CDP_acdb_cal.acdb
@@ -179,19 +186,17 @@ PRODUCT_PACKAGES += IDP_diwali_sku1_acdb_cal.acdb
 PRODUCT_PACKAGES += IDP_diwali_sku1_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += QRD_diwali_sku1_acdb_cal.acdb
 PRODUCT_PACKAGES += QRD_diwali_sku1_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += MTP_ukee_acdb_cal.acdb
-PRODUCT_PACKAGES += MTP_ukee_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += QRD_ukee_acdb_cal.acdb
-PRODUCT_PACKAGES += QRD_ukee_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += CDP_ukee_acdb_cal.acdb
-PRODUCT_PACKAGES += CDP_ukee_workspaceFileXml.qwsp
-PRODUCT_PACKAGES += QRD_diwali_parrot_acdb_cal.acdb
-PRODUCT_PACKAGES += QRD_diwali_parrot_workspaceFileXml.qwsp
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.10.pmd
 PRODUCT_PACKAGES += fai__2.3.0_0.1__3.0.0_0.0__eai_1.36_enpu2_comp.pmd
 PRODUCT_PACKAGES += fai__2.0.0_0.1__3.0.0_0.0__eai_1.36_enpu2.pmd
+PRODUCT_PACKAGES += fai__2.6.0_0.0__3.0.0_0.0__eai_1.43_enpu2.pmd
 PRODUCT_PACKAGES += fai__2.7.2_0.0__3.0.0_0.0__eai_1.36_enpu2.pmd
 PRODUCT_PACKAGES += fai__2.7.20_0.0__3.0.0_0.0__eai_1.36_enpu2.pmd
+PRODUCT_PACKAGES += fai__2.7.20_0.0__3.0.0_0.0__eai_1.43_enpu2.pmd
+PRODUCT_PACKAGES += fai__2.7.4_0.0__3.0.0_0.0__eai_1.10_enpu1.pmd
+PRODUCT_PACKAGES += fai__4.8.1_0.0__3.0.0_0.0__eai_1.36_enpu2.pmd
+PRODUCT_PACKAGES += fai__4.8.2_0.0__3.0.0_0.0__eai_1.43_enpu2.pmd
+PRODUCT_PACKAGES += fai_3.0.0_0.0_eai_1.00.pmd
 PRODUCT_PACKAGES += fai__3.0.0_0.0__eai_1.36_enpu2.pmd
 PRODUCT_PACKAGES += libfmpal
 PRODUCT_PACKAGES += event.eai
@@ -204,7 +209,7 @@ endif
 
 ifneq ($(strip $(TARGET_USES_RRO)), true)
 #Audio Specific device overlays
-DEVICE_PACKAGE_OVERLAYS += $(AUDIO_HAL_DIR)/configs/common/overlay
+DEVICE_PACKAGE_OVERLAYS += vendor/qcom/opensource/audio-hal/primary-hal/configs/common/overlay
 endif
 PRODUCT_PACKAGES += $(AUDIO_AGM)
 PRODUCT_PACKAGES += $(AUDIO_PAL)
@@ -215,12 +220,13 @@ QCV_FAMILY_SKUS := taro
 DEVICE_SKU := taro
 
 CONFIG_PAL_SRC_DIR := vendor/qcom/opensource/pal/configs/taro
-CONFIG_HAL_SRC_DIR := $(AUDIO_HAL_DIR)/configs/taro
+CONFIG_HAL_SRC_DIR := vendor/qcom/opensource/audio-hal/primary-hal/configs/taro
 CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
 
 PRODUCT_COPY_FILES += \
     $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
     $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_effects.xml \
     $(CONFIG_HAL_SRC_DIR)/card-defs.xml:$(TARGET_COPY_OUT_VENDOR)/etc/card-defs.xml \
     $(CONFIG_HAL_SRC_DIR)/microphone_characteristics.xml:$(TARGET_COPY_OUT_VENDOR)/etc/microphone_characteristics.xml \
     $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_waipio_qrd.xml \
@@ -231,7 +237,7 @@ PRODUCT_COPY_FILES += \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_waipio_cdp.xml \
     $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
     $(CONFIG_PAL_SRC_DIR)/usecaseKvManager.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usecaseKvManager.xml \
-    $(AUDIO_HAL_DIR)/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
+    vendor/qcom/opensource/audio-hal/primary-hal/configs/common/media_codecs_vendor_audio.xml:$(TARGET_COPY_OUT_VENDOR)/etc/media_codecs_vendor_audio.xml \
     frameworks/native/data/etc/android.hardware.audio.pro.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.pro.xml \
     frameworks/native/data/etc/android.hardware.audio.low_latency.xml:$(TARGET_COPY_OUT_VENDOR)/etc/permissions/android.hardware.audio.low_latency.xml
 
@@ -304,112 +310,97 @@ $(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
     $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
 
 endif
-
-# Audio configuration xml's related to Ukee
-QCV_FAMILY_SKUS := ukee
-DEVICE_SKU := ukee
-
-CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
-
 PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_ukee_qrd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_mtp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_ukee_mtp.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_ukee_cdp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_ukee_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_mtp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_ukee_mtp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_waipio_cdp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_ukee_cdp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
-
-#XML Audio configuration files
-ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
-PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
-
-#Audio configuration xml's common to Ukee family
-PRODUCT_COPY_FILES += \
-$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
-
-endif
-
-# Audio configuration xml's related to parrot
-QCV_FAMILY_SKUS := parrot
-DEVICE_SKU := parrot
-
-CONFIG_SKU_OUT_DIR := $(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)
-
-PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.conf:$(CONFIG_SKU_OUT_DIR)/audio_effects.conf \
-    $(CONFIG_HAL_SRC_DIR)/audio_effects.xml:$(CONFIG_SKU_OUT_DIR)/audio_effects.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_upd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_upd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_idp_sku1.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_qrd_sku1.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_idp_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_idp_sku1.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd_sku1.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_qrd_sku1.xml \
-    $(CONFIG_HAL_SRC_DIR)/mixer_paths_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/mixer_paths_diwali_parrot_qrd.xml \
-    $(CONFIG_PAL_SRC_DIR)/resourcemanager_diwali_qrd.xml:$(CONFIG_SKU_OUT_DIR)/resourcemanager_diwali_parrot_qrd.xml
-
-#XML Audio configuration files
-ifneq ($(TARGET_USES_AOSP_FOR_AUDIO), true)
-PRODUCT_COPY_FILES += \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(CONFIG_SKU_OUT_DIR)/audio_policy_configuration.xml
-
-#Audio configuration xml's common to Taro family
-PRODUCT_COPY_FILES += \
-$(foreach DEVICE_SKU, $(QCV_FAMILY_SKUS), \
-    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/sku_$(DEVICE_SKU)_qssi/audio_policy_configuration.xml)
-
-endif
-
-PRODUCT_COPY_FILES += \
-    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/a2dp_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/a2dp_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/audio_policy_volumes.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio_policy_volumes.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/default_volume_tables.xml:$(TARGET_COPY_OUT_VENDOR)/etc/default_volume_tables.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/r_submix_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/r_submix_audio_policy_configuration.xml \
     $(TOPDIR)frameworks/av/services/audiopolicy/config/usb_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/usb_audio_policy_configuration.xml \
-    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_audio_policy_configuration.xml \
-    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/bluetooth_qti_hearing_aid_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_hearing_aid_audio_policy_configuration.xml
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_audio_policy_configuration.xml \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/bluetooth_qti_hearing_aid_audio_policy_configuration.xml:$(TARGET_COPY_OUT_VENDOR)/etc/bluetooth_qti_hearing_aid_audio_policy_configuration.xml
 
 PRODUCT_COPY_FILES += \
-    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/codec2/media_codecs_c2_audio.xml:vendor/etc/media_codecs_c2_audio.xml \
-    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/codec2/service/1.0/c2audio.vendor.base-arm.policy:vendor/etc/seccomp_policy/c2audio.vendor.base-arm.policy \
-    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/codec2/service/1.0/c2audio.vendor.base-arm64.policy:vendor/etc/seccomp_policy/c2audio.vendor.base-arm64.policy \
-    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/codec2/service/1.0/c2audio.vendor.ext-arm.policy:vendor/etc/seccomp_policy/c2audio.vendor.ext-arm.policy \
-    $(TOPDIR)$(AUDIO_HAL_DIR)/configs/common/codec2/service/1.0/c2audio.vendor.ext-arm64.policy:vendor/etc/seccomp_policy/c2audio.vendor.ext-arm64.policy
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/codec2/media_codecs_c2_audio.xml:vendor/etc/media_codecs_c2_audio.xml \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/codec2/service/1.0/c2audio.vendor.base-arm.policy:vendor/etc/seccomp_policy/c2audio.vendor.base-arm.policy \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/codec2/service/1.0/c2audio.vendor.base-arm64.policy:vendor/etc/seccomp_policy/c2audio.vendor.base-arm64.policy \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/codec2/service/1.0/c2audio.vendor.ext-arm.policy:vendor/etc/seccomp_policy/c2audio.vendor.ext-arm.policy \
+    $(TOPDIR)vendor/qcom/opensource/audio-hal/primary-hal/configs/common/codec2/service/1.0/c2audio.vendor.ext-arm64.policy:vendor/etc/seccomp_policy/c2audio.vendor.ext-arm64.policy
+
+# ASUS_BSP +++
+ifeq ($(ASUS_BUILD_PROJECT),AI2201)
+$(warning build audio hal for AI2201...)
+
+PRODUCT_COPY_FILES += \
+    $(call find-copy-subdir-files,*,vendor/asus/AI2201/audio/adsp/image,$(TARGET_COPY_OUT_VENDOR)/firmware/)  \
+    $(call find-copy-subdir-files,*,vendor/asus/AI2201/audio/adsp_dallas/image,$(TARGET_COPY_OUT_VENDOR)/firmware_dallas/)  \
+    $(call find-copy-subdir-files,*,vendor/asus/AI2201/audio/Cirrus/fw,$(TARGET_COPY_OUT_VENDOR)/firmware/)  \
+    $(call find-copy-subdir-files,*,vendor/asus/AI2201/audio/Cirrus/fw,$(TARGET_COPY_OUT_VENDOR)/firmware_dallas/)  \
+    $(call find-copy-subdir-files,*,vendor/asus/AI2201/audio/scripts/vendor/,$(TARGET_COPY_OUT_VENDOR)/bin/)
+
+PRODUCT_COPY_FILES += \
+    vendor/asus/AI2201/audio/boot_sound/boot_sound.wav:$(TARGET_COPY_OUT_VENDOR)/etc/boot_sound.wav
+
+PRODUCT_COPY_FILES += \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_AI2201.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/AI2201/mixer_paths_AI2201.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_AI2201_EU.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/AI2201/mixer_paths_AI2201_EU.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_AI2201.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/AI2201/resourcemanager_AI2201.xml \
+    $(CONFIG_PAL_SRC_DIR)/usecaseKvManager_AI2201.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/AI2201/usecaseKvManager_AI2201.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects_AI2201.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/AI2201/audio_effects_AI2201.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_volumes_AI2201.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/AI2201/audio_policy_volumes_AI2201.xml \
+    $(CONFIG_HAL_SRC_DIR)/default_volume_tables_AI2201.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/AI2201/default_volume_tables_AI2201.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration_AI2201.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/AI2201/audio_policy_configuration_AI2201.xml
+
+endif
+# ASUS_BSP ---
+
+# ASUS_BSP for DAVINCI +++
+ifeq ($(ASUS_BUILD_PROJECT),AI2202)
+$(warning build audio hal for AI2202...)
+
+PRODUCT_COPY_FILES += \
+    $(call find-copy-subdir-files,*,vendor/asus/AI2202/audio/adsp/8450/image,$(TARGET_COPY_OUT_VENDOR)/firmware_waipio/) \
+    $(call find-copy-subdir-files,*,vendor/asus/AI2202/audio/adsp/8475/image,$(TARGET_COPY_OUT_VENDOR)/firmware/)
+
+PRODUCT_COPY_FILES += \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_DAVINCI.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/DAVINCI/mixer_paths_DAVINCI.xml \
+    $(CONFIG_HAL_SRC_DIR)/mixer_paths_DAVINCI_EU.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/DAVINCI/mixer_paths_DAVINCI_EU.xml \
+    $(CONFIG_PAL_SRC_DIR)/resourcemanager_davinci.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/DAVINCI/resourcemanager_davinci.xml \
+    $(CONFIG_PAL_SRC_DIR)/usecaseKvManager_davinci.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/DAVINCI/usecaseKvManager_davinci.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_effects_AI2202.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/DAVINCI/audio_effects_AI2202.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_volumes_AI2202.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/DAVINCI/audio_policy_volumes_AI2202.xml \
+    $(CONFIG_HAL_SRC_DIR)/default_volume_tables_AI2202.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/DAVINCI/default_volume_tables_AI2202.xml \
+    $(CONFIG_HAL_SRC_DIR)/audio_policy_configuration_AI2202.xml:$(TARGET_COPY_OUT_VENDOR)/etc/audio/DAVINCI/audio_policy_configuration_AI2202.xml
+
+endif
+# ASUS_BSP for DAVINCI ---
 
 # Reduce client buffer size for fast audio output tracks
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
     af.fast_track_multiplier=1
 
 # Reduce AF standby time for playback threads (except offload)
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
    ro.audio.flinger_standbytime_ms=2000
 
 # Low latency audio buffer size in frames
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio_hal.period_size=192
 
 # period multiplier for low latency capture tracks
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
     vendor.audio.ull_record_period_multiplier=2
 
 ##Ambisonic Capture
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.ambisonic.capture=false \
 persist.vendor.audio.ambisonic.auto.profile=false
 
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.apptype.multirec.enabled=false
 
 ##fluencetype can be "fluence" or "fluencepro" or "none"
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.fluencetype=none\
 persist.vendor.audio.fluence.voicecall=true\
 persist.vendor.audio.fluence.voicerec=false\
@@ -419,211 +410,212 @@ persist.vendor.audio.fluence.tmic.enabled=false
 #
 #snapdragon value add features
 #
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 ro.qc.sdk.audio.ssr=false
 
 ##fluencetype can be "fluence" or "fluencepro" or "none"
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 ro.qc.sdk.audio.fluencetype=none\
 persist.audio.fluence.voicecall=true\
 persist.audio.fluence.voicerec=false\
 persist.audio.fluence.speaker=true
 
 ##speaker protection v3 switch and ADSP AFE API version
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.spv3.enable=true\
 persist.vendor.audio.avs.afe_api_version=2
 
 #disable tunnel encoding
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.tunnel.encode=false
 
 #Disable RAS Feature by default
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.ras.enabled=false
 
 #Buffer size in kbytes for compress offload playback
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.buffer.size.kb=32
 
 #Enable offload audio video playback by default
-PRODUCT_VENDOR_PROPERTIES += \
-audio.offload.video=true
+PRODUCT_PROPERTY_OVERRIDES += \
+audio.offload.video=false
 
 #Enable audio track offload by default
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.track.enable=true
 
 #Enable music through deep buffer
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 audio.deep_buffer.media=true
 
 #enable voice path for PCM VoIP by default
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.voice.path.for.pcm.voip=true
 
 #Enable multi channel aac through offload
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.multiaac.enable=true
 
 #Enable DS2, Hardbypass feature for Dolby
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.dolby.ds2.enabled=false\
 vendor.audio.dolby.ds2.hardbypass=false
 
 #Disable Multiple offload sesison
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.multiple.enabled=false
 
 #Disable Compress passthrough playback
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.passthrough=false
 
 #Disable surround sound recording
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 ro.vendor.audio.sdk.ssr=false
 
 #enable dsp gapless mode by default
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.offload.gapless.enabled=true
 
 #enable pbe effects
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.safx.pbe.enabled=false
 
 #parser input buffer size(256kb) in byte stream mode
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.parser.ip.buffer.size=262144
 
 #flac sw decoder 24 bit decode capability
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.flac.sw.decoder.24bit=true
 
 #timeout crash duration set to 20sec before system is ready.
 #timeout duration updates to default timeout of 5sec once the system is ready.
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hal.boot.timeout.ms=20000
 
 #split a2dp DSP supported encoder list
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.a2dp_offload_cap=sbc-aptx-aptxtws-aptxhd-aac-ldac
 
 # A2DP offload support
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 ro.bluetooth.a2dp_offload.supported=true
 
 # Disable A2DP offload
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.bluetooth.a2dp_offload.disabled=false
 
 # A2DP offload DSP supported encoder list
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.bluetooth.a2dp_offload.cap=sbc-aac-aptx-aptxhd-ldac
 
 #enable software decoders for ALAC and APE
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.alac.decoder=true
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.ape.decoder=true
 
 #enable software decoder for MPEG-H
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.use.sw.mpegh.decoder=true
 
 #disable hw aac encoder by default in AR
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hw.aac.encoder=false
 
 #audio becoming noisy intent broadcast delay
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 audio.sys.noisy.broadcast.delay=600
 
 #offload pausetime out duration to 3 secs to inline with other outputs
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 audio.sys.offload.pstimeout.secs=3
 
 #Set AudioFlinger client heap size
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 ro.af.client_heap_size_kbyte=7168
 
 #Set HAL buffer size to samples equal to 3 ms
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio_hal.in_period_size=144
 
 #Set HAL buffer size to 3 ms
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio_hal.period_multiplier=3
 
 #ADM Buffering size in ms
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.adm.buffering.ms=2
 
 #enable headset calibration
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.volume.headset.gain.depcal=true
 
 #enable dualmic fluence for voice communication
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.audio.fluence.voicecomm=true
 
 #enable c2 based encoders/decoders as default NT decoders/encoders
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.c2.preferred=true
 
 #Enable dmaBuf heap usage by C2 components
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 debug.c2.use_dmabufheaps=1
 
 #Enable C2 suspend
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.qc2audio.suspend.enabled=true
 
 #Enable qc2 audio sw flac frame decode
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.qc2audio.per_frame.flac.dec.enabled=true
 
 ifneq ($(GENERIC_ODM_IMAGE),true)
+$(warning "Enabling codec2.0 SW only for non-generic odm build variant")
 #Rank OMX SW codecs lower than OMX HW codecs
-PRODUCT_VENDOR_PROPERTIES += debug.stagefright.omx_default_rank=0
+PRODUCT_PROPERTY_OVERRIDES += debug.stagefright.omx_default_rank=0
 endif
 endif
 
 USE_XML_AUDIO_POLICY_CONF := 1
 
 #enable keytone FR
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.hal.output.suspend.supported=true
 
 #Enable AAudio MMAP/NOIRQ data path
 #2 is AAUDIO_POLICY_AUTO so it will try MMAP then fallback to Legacy path
-PRODUCT_VENDOR_PROPERTIES += aaudio.mmap_policy=2
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_policy=2
 #Allow EXCLUSIVE then fall back to SHARED.
-PRODUCT_VENDOR_PROPERTIES += aaudio.mmap_exclusive_policy=2
-PRODUCT_VENDOR_PROPERTIES += aaudio.hw_burst_min_usec=2000
+PRODUCT_PROPERTY_OVERRIDES += aaudio.mmap_exclusive_policy=2
+PRODUCT_PROPERTY_OVERRIDES += aaudio.hw_burst_min_usec=2000
 
 
 #enable mirror-link feature
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.enable.mirrorlink=false
 
 #enable voicecall speaker stereo
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.voicecall.speaker.stereo=true
 
 #enable AAC frame ctl for A2DP sinks
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_frm_ctl.enabled=true
 
 #enable VBR frame ctl
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.bt.aac_vbr_frm_ctl.enabled=true
 
 #enable dedicated proxy for hearing aid
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 persist.vendor.audio.ha_proxy.enabled=true
 
 #add dynamic feature flags here
-PRODUCT_VENDOR_PROPERTIES += \
+PRODUCT_PROPERTY_OVERRIDES += \
 vendor.audio.feature.a2dp_offload.enable=true \
 vendor.audio.feature.afe_proxy.enable=true \
 vendor.audio.feature.anc_headset.enable=false \
@@ -667,7 +659,7 @@ vendor.audio.feature.wsa.enable=false \
 vendor.audio.feature.audiozoom.enable=false \
 vendor.audio.feature.snd_mon.enable=true \
 vendor.audio.feature.dmabuf.cma.memory.enable=true \
-vendor.audio.hdr.record.enable=false
+vendor.audio.hdr.record.enable=true
 
 
 # for HIDL related packages

@@ -1,4 +1,5 @@
 LOCAL_PATH := $(call my-dir)
+
 #-------------------------------------------
 #            Build HFP LIB
 #-------------------------------------------
@@ -30,8 +31,8 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_C_INCLUDES := \
     vendor/qcom/opensource/pal \
-    $(call project-path-for,qcom-audio)/hal \
-    $(call project-path-for,qcom-audio)/hal/audio_extn \
+    vendor/qcom/opensource/audio-hal/primary-hal/hal \
+    vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn \
     external/expat/lib \
     system/media/audio_utils/include \
     $(call include-path-for, audio-route) \
@@ -67,8 +68,8 @@ LOCAL_SHARED_LIBRARIES := \
 
 LOCAL_C_INCLUDES := \
     vendor/qcom/opensource/pal \
-    $(call project-path-for,qcom-audio)/hal \
-    $(call project-path-for,qcom-audio)/hal/audio_extn \
+    vendor/qcom/opensource/audio-hal/primary-hal/hal \
+    vendor/qcom/opensource/audio-hal/primary-hal/hal/audio_extn \
     external/expat/lib \
     system/media/audio_utils/include \
     $(call include-path-for, audio-route) \

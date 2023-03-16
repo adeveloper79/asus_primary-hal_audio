@@ -56,6 +56,12 @@
 #define MAX_ACTIVE_MICROPHONES_TO_SUPPORT 10
 #define AFE_PROXY_RECORD_PERIOD_SIZE  768
 
+//Jessy +++
+#ifdef ASUS_AI2201_PROJECT
+#define MUTE_TIME_MS 150
+#endif
+//Jessy ---
+
 static bool karaoke = false;
 static bool hac_voip = false;
 
@@ -706,7 +712,6 @@ static int astream_out_get_presentation_position(
     if (astream_out) {
        switch (astream_out->GetPalStreamType(astream_out->flags_)) {
        case PAL_STREAM_COMPRESSED:
-       case PAL_STREAM_PCM_OFFLOAD:
           ret = astream_out->GetFrames(frames);
           if (ret != 0) {
              AHAL_ERR("GetTimestamp failed %d", ret);
@@ -745,7 +750,6 @@ static int out_get_render_position(const struct audio_stream_out *stream,
     if (astream_out) {
         switch (astream_out->GetPalStreamType(astream_out->flags_)) {
         case PAL_STREAM_COMPRESSED:
-        case PAL_STREAM_PCM_OFFLOAD:
             ret = astream_out->GetFrames(&frames);
             if (ret != 0) {
                 AHAL_ERR("Get DSP Frames failed %d", ret);
@@ -753,10 +757,15 @@ static int out_get_render_position(const struct audio_stream_out *stream,
             }
             *dsp_frames = (uint32_t) frames;
             break;
+        case PAL_STREAM_PCM_OFFLOAD:
         case PAL_STREAM_LOW_LATENCY:
         case PAL_STREAM_DEEP_BUFFER:
-            frames =  astream_out->GetFramesWritten(NULL);
-            *dsp_frames = (uint32_t) frames;
+            ret =  astream_out->GetFramesWritten(NULL);
+            if (ret < 0) {
+                AHAL_ERR("Get DSP Frames failed %d", ret);
+                return ret;
+            }
+            *dsp_frames = ret;
             break;
         default:
             break;
@@ -1550,9 +1559,6 @@ pal_stream_type_t StreamInPrimary::GetPalStreamType(
         return palStreamType;
     } else if (source_ == AUDIO_SOURCE_VOICE_RECOGNITION) {
         palStreamType = PAL_STREAM_VOICE_RECOGNITION;
-        if (halStreamFlags & AUDIO_INPUT_FLAG_MMAP_NOIRQ) {
-            palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
-        }
         return palStreamType;
     }
 
@@ -1608,7 +1614,8 @@ pal_stream_type_t StreamOutPrimary::GetPalStreamType(
         return palStreamType;
     }
     if ((halStreamFlags & AUDIO_OUTPUT_FLAG_RAW) != 0) {
-        palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
+        //palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
+        palStreamType = PAL_STREAM_LOW_LATENCY;//ASUS_BSP ull had pop sound issue,use LL.
     } else if ((halStreamFlags & AUDIO_OUTPUT_FLAG_FAST) != 0) {
         palStreamType = PAL_STREAM_LOW_LATENCY;
     } else if (halStreamFlags ==
@@ -1623,7 +1630,8 @@ pal_stream_type_t StreamOutPrimary::GetPalStreamType(
     } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_MMAP_NOIRQ) {
         palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
     } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_RAW) {
-        palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
+        //palStreamType = PAL_STREAM_ULTRA_LOW_LATENCY;
+        palStreamType = PAL_STREAM_LOW_LATENCY;//ASUS_BSP ull had pop sound issue,use LL.
     } else if (halStreamFlags == (AUDIO_OUTPUT_FLAG_DIRECT|
                                       AUDIO_OUTPUT_FLAG_COMPRESS_OFFLOAD|
                                   AUDIO_OUTPUT_FLAG_NON_BLOCKING)) {
@@ -1772,7 +1780,7 @@ int StreamOutPrimary::CreateMmapBuffer(int32_t min_size_frames,
 int StreamOutPrimary::Stop() {
     int ret = -ENOSYS;
 
-    AHAL_INFO("Enter: OutPrimary usecase(%d: %s)", GetUseCase(), use_case_table[GetUseCase()]);
+    AHAL_DBG("Enter");
     stream_mutex_.lock();
     if (usecase_ == USECASE_AUDIO_PLAYBACK_VOIP)
         hac_voip = false;
@@ -1792,8 +1800,7 @@ int StreamOutPrimary::Stop() {
 
 int StreamOutPrimary::Start() {
     int ret = -ENOSYS;
-
-    AHAL_INFO("Enter: OutPrimary usecase(%d: %s)", GetUseCase(), use_case_table[GetUseCase()]);
+    AHAL_DBG("Enter");
     stream_mutex_.lock();
     if (usecase_ == USECASE_AUDIO_PLAYBACK_MMAP &&
             pal_stream_handle_ && !stream_started_) {
@@ -1934,8 +1941,6 @@ int StreamOutPrimary::Standby() {
     AHAL_DBG("Enter");
     stream_mutex_.lock();
     if (pal_stream_handle_) {
-        if (streamAttributes_.type == PAL_STREAM_PCM_OFFLOAD)
-            GetFrames(&mCachedPosition);
         ret = pal_stream_stop(pal_stream_handle_);
         if (ret) {
             AHAL_ERR("failed to stop stream.");
@@ -2174,8 +2179,7 @@ int StreamOutPrimary::SetParameters(struct str_parms *parms) {
     if (ret >= 0) {
         adevice->dp_controller = controller;
         adevice->dp_stream = stream;
-        if (stream >= 0 || controller >= 0)
-            AHAL_INFO("ret %d, plugin device cont %d stream %d", ret, controller, stream);
+        AHAL_INFO("ret %d, plugin device cont %d stream %d", ret, controller, stream);
     } else {
         AHAL_ERR("error %d, failed to get stream and controller", ret);
     }
@@ -2501,8 +2505,14 @@ int StreamOutPrimary::Open() {
     bool isHifiFilterEnabled = false;
     bool *payload_hifiFilter = &isHifiFilterEnabled;
     size_t param_size = 0;
+    
+    // ASUS_BSP for SMMI output select +++
+    #ifdef ASUS_DAVINCI_PROJECT
+    int output_selected = 0;
+    #endif
+    // ASUS_BSP for SMMI output select ---
 
-    AHAL_INFO("Enter: OutPrimary usecase(%d: %s)", GetUseCase(), use_case_table[GetUseCase()]);
+    AHAL_DBG("Enter OutPrimary ");
 
     if (!mInitialized) {
         AHAL_ERR("Not initialized, returning error");
@@ -2594,6 +2604,17 @@ int StreamOutPrimary::Open() {
                 "hifi-filter_custom_key",
                 sizeof(mPalOutDevice->custom_config.custom_key));
     }
+    
+    // ASUS_BSP for SMMI output select +++
+    #ifdef ASUS_DAVINCI_PROJECT
+    output_selected = property_get_int32("vendor.audio.output.selected", 0);
+    if ((mPalOutDevice->id == PAL_DEVICE_OUT_SPEAKER) && (output_selected == 2)) {
+        strlcpy(mPalOutDevice->custom_config.custom_key, "mono_key",
+                sizeof(mPalOutDevice->custom_config.custom_key));
+        AHAL_INFO("mono_key custom key ");
+    }
+    #endif
+    // ASUS_BSP for SMMI output select ---
 
     device_cap_query = (pal_param_device_capability_t *)malloc(sizeof(pal_param_device_capability_t));
 
@@ -2624,7 +2645,8 @@ int StreamOutPrimary::Open() {
            streamAttributes_.out_media_config.ch_info.channels, streamAttributes_.out_media_config.sample_rate,
            streamAttributes_.out_media_config.aud_fmt_id, streamAttributes_.type,
            streamAttributes_.out_media_config.bit_width);
-    AHAL_DBG("msample_rate %d mchannels %d mNoOfOutDevices %zu", msample_rate, mchannels, mAndroidOutDevices.size());
+    AHAL_DBG("msample_rate %d mchannels %d", msample_rate, mchannels);
+    AHAL_DBG("mNoOfOutDevices %zu", mAndroidOutDevices.size());
     ret = pal_stream_open(&streamAttributes_,
                           mAndroidOutDevices.size(),
                           mPalOutDevice,
@@ -2634,6 +2656,7 @@ int StreamOutPrimary::Open() {
                           (uint64_t)this,
                           &pal_stream_handle_);
 
+    AHAL_DBG("(%x:ret)",ret);
     if (ret) {
         AHAL_ERR("Pal Stream Open Error (%x)", ret);
         ret = -EINVAL;
@@ -2806,19 +2829,6 @@ int StreamOutPrimary::GetFrames(uint64_t *frames)
         *frames = 0;
         return 0;
     }
-    /*
-     * when ssr happens, dsp position for pcm offload could be 0,
-     * so return written frames instead
-     */
-    if ((PAL_STREAM_PCM_OFFLOAD == streamAttributes_.type) &&
-        (CARD_STATUS_OFFLINE == AudioDevice::sndCardState)) {
-        struct timespec ts;
-        *frames = GetFramesWritten(&ts);
-        mCachedPosition = *frames;
-        AHAL_DBG("card is offline, return written frames %lld", (long long) *frames);
-        goto exit;
-    }
-
     ret = pal_get_timestamp(pal_stream_handle_, &tstamp);
     if (ret != 0) {
        AHAL_ERR("pal_get_timestamp failed %d", ret);
@@ -2844,7 +2854,7 @@ int StreamOutPrimary::GetFrames(uint64_t *frames)
             dsp_frames = (dsp_frames > offset) ? (dsp_frames - offset) : 0;
         }
     }
-    *frames = dsp_frames + mCachedPosition;
+    *frames = dsp_frames;
 exit:
     return ret;
 }
@@ -2862,8 +2872,8 @@ int StreamOutPrimary::GetOutputUseCase(audio_output_flags_t halStreamFlags)
             usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD;
         else
             usecase = USECASE_AUDIO_PLAYBACK_OFFLOAD2;
-    } else if (halStreamFlags & AUDIO_OUTPUT_FLAG_RAW)
-        usecase = USECASE_AUDIO_PLAYBACK_ULL;
+    } /*else if (halStreamFlags & AUDIO_OUTPUT_FLAG_RAW)
+        usecase = USECASE_AUDIO_PLAYBACK_ULL;*/
     else if (halStreamFlags & AUDIO_OUTPUT_FLAG_FAST)
         usecase = USECASE_AUDIO_PLAYBACK_LOW_LATENCY;
     else if (halStreamFlags & AUDIO_OUTPUT_FLAG_DEEP_BUFFER)
@@ -3487,7 +3497,6 @@ int StreamInPrimary::GetPalDeviceIds(pal_device_id_t *palDevIds, int *numPalDevs
 int StreamInPrimary::Stop() {
     int ret = -ENOSYS;
 
-    AHAL_INFO("Enter: InPrimary usecase(%d: %s)", GetUseCase(), use_case_table[GetUseCase()]);
     stream_mutex_.lock();
     if (usecase_ == USECASE_AUDIO_PLAYBACK_VOIP)
         hac_voip = false;
@@ -3505,7 +3514,7 @@ int StreamInPrimary::Stop() {
 int StreamInPrimary::Start() {
     int ret = -ENOSYS;
 
-    AHAL_INFO("Enter: InPrimary usecase(%d: %s)", GetUseCase(), use_case_table[GetUseCase()]);
+    AHAL_DBG("Enter");
     stream_mutex_.lock();
     if (usecase_ == USECASE_AUDIO_RECORD_MMAP &&
             pal_stream_handle_ && !stream_started_) {
@@ -3616,6 +3625,14 @@ int StreamInPrimary::Standby() {
     if (ret)
         ret = -EINVAL;
 
+//Jessy +++
+#ifdef ASUS_AI2201_PROJECT
+    totalMuteBytes = audio_bytes_per_frame(
+        audio_channel_count_from_in_mask(config_.channel_mask),
+        config_.format)*config_.sample_rate*MUTE_TIME_MS/1000;
+#endif
+//Jessy ---
+
     stream_mutex_.unlock();
     AHAL_DBG("Exit ret: %d", ret);
     return ret;
@@ -3627,6 +3644,13 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
 {
     int status = 0;
     effect_descriptor_t desc;
+
+// ASUS BSP : OZO porting +++
+#ifdef ASUS_DAVINCI_PROJECT
+    #define EFFECT_UUID_OZO { 0x7e384a3b, 0x7850, 0x4a64, 0xa097, { 0x88, 0x42, 0x50, 0xd8, 0xa7, 0x37 } }
+    effect_uuid_t ozo_effect_uuid = EFFECT_UUID_OZO;
+#endif
+// ASUS BSP : OZO porting ---
 
     status = (*effect)->get_descriptor(effect, &desc);
     if (status != 0)
@@ -3710,6 +3734,21 @@ int StreamInPrimary::addRemoveAudioEffect(const struct audio_stream *stream __un
             }
         }
     }
+
+// ASUS BSP : OZO porting +++
+#ifdef ASUS_DAVINCI_PROJECT
+    // Check if OZO Audio capture effect
+    if (memcmp(&desc.uuid, &ozo_effect_uuid, sizeof(effect_uuid_t)) == 0) {
+	if (enable) {
+	    ozo_effect = effect;
+	    ALOGD("Ozo effect accepted for processing chain");
+	}else{
+	    ozo_effect = nullptr;
+	}
+    }
+#endif
+// ASUS BSP : OZO porting ---
+
 exit:
     if (status) {
        effects_applied_ = false;
@@ -3762,7 +3801,7 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
     struct pal_channel_info ch_info = {0, {0}};
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    AHAL_INFO("Enter: InPrimary usecase(%d: %s)", GetUseCase(), use_case_table[GetUseCase()]);
+    AHAL_DBG("enter ");
 
     stream_mutex_.lock();
     if (!mInitialized){
@@ -3771,7 +3810,7 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
         goto done;
     }
 
-    AHAL_DBG("mAndroidInDevices %d, mNoOfInDevices %zu, new_devices %d, num new_devices: %zu",
+    AHAL_DBG("mAndroidInDevices %#x, mNoOfInDevices %zu, new_devices %#x, num new_devices: %zu",
              AudioExtn::get_device_types(mAndroidInDevices),
              mAndroidInDevices.size(), AudioExtn::get_device_types(new_devices), new_devices.size());
 
@@ -3872,12 +3911,59 @@ int StreamInPrimary::RouteStream(const std::set<audio_devices_t>& new_devices, b
                         sizeof(mPalInDevice[i].custom_config.custom_key));
                 AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
             }
+// vector+++ add for camera recording
+	    if (source_ == AUDIO_SOURCE_CAMCORDER) {
+		char foregroundApp[256] = {0};
+		property_get("vendor.foreground.app", foregroundApp, "");
+		if (((adevice->camcorder_rotation_degree > 90) ^ adevice->camcorder_facing) || !strcmp(foregroundApp, "com.asus.camera"))
+		    strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder-mic-inv",
+			    sizeof(mPalInDevice[i].custom_config.custom_key));
+		else
+		    strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder-mic",
+			    sizeof(mPalInDevice[i].custom_config.custom_key));
+		AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
+	    }
+// vector--- add for camera recording
+// ASUS_BSP+++ for SMMI test select single mic
+            char foregroundApp[256] = {0};
+            property_get("vendor.foreground.app", foregroundApp, "");
+            if (!strcmp(foregroundApp, "com.asus.atd.smmitest")) {
+                strlcpy(mPalInDevice[i].custom_config.custom_key, "smmi-mic",
+                        sizeof(mPalInDevice[i].custom_config.custom_key));
+                AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
+            }
+// ASUS_BSP--- for SMMI test select single mic
         }
 
         mAndroidInDevices = new_devices;
 
         if (pal_stream_handle_)
             ret = pal_stream_set_device(pal_stream_handle_, noPalDevices, mPalInDevice);
+// vector+++ add for camera recording   
+    }else{
+	for (int i = 0; i < mAndroidInDevices.size(); i++) {
+	    if (source_ == AUDIO_SOURCE_CAMCORDER) {
+		char foregroundApp[256] = {0};
+		property_get("vendor.foreground.app", foregroundApp, "");
+		if (((adevice->camcorder_rotation_degree > 90) ^ adevice->camcorder_facing) || !strcmp(foregroundApp, "com.asus.camera"))
+		    strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder-mic-inv",
+			    sizeof(mPalInDevice[i].custom_config.custom_key));
+		else
+		    strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder-mic",
+			    sizeof(mPalInDevice[i].custom_config.custom_key));
+		AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
+	    }
+// ASUS_BSP+++ for SMMI test select single mic
+		char foregroundApp[256] = {0};
+		property_get("vendor.foreground.app", foregroundApp, "");
+		if (!strcmp(foregroundApp, "com.asus.atd.smmitest")) {
+			strlcpy(mPalInDevice[i].custom_config.custom_key, "smmi-mic",
+					sizeof(mPalInDevice[i].custom_config.custom_key));
+			AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
+		}
+// ASUS_BSP--- for SMMI test select single mic
+	}
+// vector--- add for camera recording
     }
 
 done:
@@ -3921,7 +4007,7 @@ int StreamInPrimary::Open() {
     dynamic_media_config_t dynamic_media_config;
     std::shared_ptr<AudioDevice> adevice = AudioDevice::GetInstance();
 
-    AHAL_INFO("Enter: InPrimary usecase(%d: %s)", GetUseCase(), use_case_table[GetUseCase()]);
+    AHAL_DBG("Enter InPrimary");
     if (!mInitialized) {
         AHAL_ERR("Not initialized, returning error");
         ret = -EINVAL;
@@ -4068,6 +4154,8 @@ int StreamInPrimary::Open() {
                          (uint64_t)this,
                          &pal_stream_handle_);
 
+    AHAL_DBG("(%x:ret)", ret);
+
     if (ret) {
         AHAL_ERR("Pal Stream Open Error (%x)", ret);
         ret = -EINVAL;
@@ -4132,23 +4220,26 @@ uint32_t StreamInPrimary::GetBufferSizeForLowLatencyRecord() {
 /* in bytes */
 uint32_t StreamInPrimary::GetBufferSize() {
     struct pal_stream_attributes streamAttributes_;
-    size_t size = 0;
-    uint32_t bytes_per_period_sample = 0;
 
     streamAttributes_.type = StreamInPrimary::GetPalStreamType(flags_,
             config_.sample_rate);
     if (streamAttributes_.type == PAL_STREAM_VOIP_TX) {
-        size = (DEFAULT_VOIP_BUF_DURATION_MS * config_.sample_rate / 1000) *
+        return (DEFAULT_VOIP_BUF_DURATION_MS * config_.sample_rate / 1000) *
                audio_bytes_per_frame(
                        audio_channel_count_from_in_mask(config_.channel_mask),
                        config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_LOW_LATENCY) {
-        size = LOW_LATENCY_CAPTURE_PERIOD_SIZE *
+        return LOW_LATENCY_CAPTURE_PERIOD_SIZE *
             audio_bytes_per_frame(
                     audio_channel_count_from_in_mask(config_.channel_mask),
                     config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_ULTRA_LOW_LATENCY) {
         return GetBufferSizeForLowLatencyRecord();
+    } else if (streamAttributes_.type == PAL_STREAM_DEEP_BUFFER) {
+        return (config_.sample_rate/ 1000) * AUDIO_CAPTURE_PERIOD_DURATION_MSEC *
+            audio_bytes_per_frame(
+                    audio_channel_count_from_in_mask(config_.channel_mask),
+                    config_.format);
     } else if (streamAttributes_.type == PAL_STREAM_VOICE_CALL_RECORD) {
         return (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC/ 1000) *
             audio_bytes_per_frame(
@@ -4165,24 +4256,8 @@ uint32_t StreamInPrimary::GetBufferSize() {
                         audio_channel_count_from_in_mask(config_.channel_mask),
                         config_.format);
     } else {
-        /* this else condition will be other stream types like deepbuffer/RAW.. */
-        size = (config_.sample_rate * AUDIO_CAPTURE_PERIOD_DURATION_MSEC) /1000;
-        size *= audio_bytes_per_frame(
-                         audio_channel_count_from_in_mask(config_.channel_mask),
-                         config_.format);;
+        return BUF_SIZE_CAPTURE * NO_OF_BUF;
     }
-    /* make sure the size is multiple of 32 bytes and additionally multiple of
-     * the frame_size (required for 24bit samples and non-power-of-2 channel counts)
-     * At 48 kHz mono 16-bit PCM:
-     *  5.000 ms = 240 frames = 15*16*1*2 = 480, a whole multiple of 32 (15)
-     *  3.333 ms = 160 frames = 10*16*1*2 = 320, a whole multiple of 32 (10)
-     * Also, make sure the size is multiple of bytes per period sample
-     */
-    bytes_per_period_sample = audio_bytes_per_sample(config_.format) *
-                              audio_channel_count_from_in_mask(config_.channel_mask);
-    size = nearest_multiple(size, lcm(32, bytes_per_period_sample));
-
-    return size;
 }
 
 int StreamInPrimary::GetInputUseCase(audio_input_flags_t halStreamFlags, audio_source_t source)
@@ -4277,7 +4352,6 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
                 memset(palBuffer.buffer, 0, palBuffer.size);
                 AHAL_ERR("error, failed to read data from PAL");
                 ATRACE_END();
-                ret = bytes;
                 goto exit;
             } else {
                 size += ret;
@@ -4330,6 +4404,40 @@ ssize_t StreamInPrimary::read(const void *buffer, size_t bytes) {
     }
 
     ret = pal_stream_read(pal_stream_handle_, &palBuffer);
+
+//Jessy +++
+#ifdef ASUS_AI2201_PROJECT
+    if (AudioExtn::audio_devices_cmp(mAndroidInDevices, AUDIO_DEVICE_IN_BUILTIN_MIC) &&
+        usecase_ == USECASE_AUDIO_RECORD) {
+        if (totalMuteBytes > 0 && stream_started_) {
+            memset(palBuffer.buffer, 0, palBuffer.size);
+            totalMuteBytes -= (int) palBuffer.size;
+        } else
+            totalMuteBytes = 0;
+    }
+#endif
+//Jessy ---
+
+// ASUS BSP : OZO porting +++
+#ifdef ASUS_DAVINCI_PROJECT
+    // OZO Audio as pre-processing step
+    if (ret >= 0 && bytes > 0 && ozo_effect) {
+        int framecount = bytes / audio_bytes_per_sample(config_.format);
+        audio_buffer_t inBuffer, outBuffer;
+
+        inBuffer.raw = (void *)(palBuffer.buffer);
+        inBuffer.frameCount = framecount / audio_channel_count_from_out_mask(config_.channel_mask);
+        // Special trick to signal that input format is actually in->format
+        // The effect has been differently configured originally and cannot be changed anymore...
+        outBuffer.raw = NULL;
+        outBuffer.frameCount = config_.format;
+
+        effect_handle_t effect = (effect_handle_t)ozo_effect;
+        (*effect)->process(effect, &inBuffer, &outBuffer);
+    }
+#endif
+// ASUS BSP : OZO porting ---
+
     // mute pcm data if sva client is reading lab data
     if (adevice->num_va_sessions_ > 0 &&
         source_ != AUDIO_SOURCE_VOICE_RECOGNITION &&
@@ -4535,14 +4643,33 @@ StreamInPrimary::StreamInPrimary(audio_io_handle_t handle,
                     flags = flags_ = AUDIO_INPUT_FLAG_RAW;
                     setup_hdr_usecase(&mPalInDevice[i]);
                 }
+#ifdef ASUS_DAVINCI_PROJECT // ASUS_BSP add for camera ozo
+	    }else if(channels == 2) {
+                strlcpy(mPalInDevice[i].custom_config.custom_key, "unprocessed-ozo-stereo-mic",
+                        sizeof(mPalInDevice[i].custom_config.custom_key));
+#endif
             }
         }
 
+#ifdef ASUS_DAVINCI_PROJECT // ASUS_BSP for mappingtable
+        if (source_ == AUDIO_SOURCE_MIC)
+            strlcpy(mPalInDevice[i].custom_config.custom_key, "dmic-endfire",
+                    sizeof(mPalInDevice[i].custom_config.custom_key));
+        AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
+#else
         if (source_ == AUDIO_SOURCE_CAMCORDER && adevice->cameraOrientation == CAMERA_DEFAULT) {
             strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder_landscape",
                     sizeof(mPalInDevice[i].custom_config.custom_key));
             AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
         }
+//Jessy +++ send custom key ,camcorder, to acdb
+        if (source_ == AUDIO_SOURCE_CAMCORDER) {
+            strlcpy(mPalInDevice[i].custom_config.custom_key, "camcorder",
+                    sizeof(mPalInDevice[i].custom_config.custom_key));
+            AHAL_INFO("Setting custom key as %s", mPalInDevice[i].custom_config.custom_key);
+        }
+//Jessy ---
+#endif
     }
 
     usecase_ = GetInputUseCase(flags, source);
